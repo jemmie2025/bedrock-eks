@@ -1,0 +1,100 @@
+# Helm Values for Retail Store Sample App with RDS Integration
+# Use this file when deploying with managed RDS databases
+
+# Note: Replace the following placeholders with actual values from Terraform outputs:
+# - MYSQL_ENDPOINT
+# - MYSQL_USERNAME
+# - MYSQL_PASSWORD
+# - POSTGRES_ENDPOINT
+# - POSTGRES_USERNAME
+# - POSTGRES_PASSWORD
+
+namespace: retail-app
+
+catalog:
+  enabled: true
+  replicas: 2
+  env:
+    - name: DB_ENDPOINT
+      value: "MYSQL_ENDPOINT"  # Replace with actual RDS MySQL endpoint
+    - name: DB_USER
+      valueFrom:
+        secretKeyRef:
+          name: catalog-db-secret
+          key: username
+    - name: DB_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: catalog-db-secret
+          key: password
+    - name: DB_NAME
+      value: "catalog"
+
+orders:
+  enabled: true
+  replicas: 2
+  env:
+    - name: DB_ENDPOINT
+      value: "POSTGRES_ENDPOINT"  # Replace with actual RDS PostgreSQL endpoint
+    - name: DB_USER
+      valueFrom:
+        secretKeyRef:
+          name: orders-db-secret
+          key: username
+    - name: DB_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: orders-db-secret
+          key: password
+    - name: DB_NAME
+      value: "orders"
+
+# Disable in-cluster databases when using RDS
+mysql:
+  enabled: false
+
+postgresql:
+  enabled: false
+
+# Keep other services enabled
+cart:
+  enabled: true
+  replicas: 2
+
+checkout:
+  enabled: true
+  replicas: 2
+
+ui:
+  enabled: true
+  replicas: 2
+
+assets:
+  enabled: true
+  replicas: 1
+
+redis:
+  enabled: true
+  auth:
+    enabled: false
+
+rabbitmq:
+  enabled: true
+  auth:
+    username: guest
+    password: guest
+
+# Ingress configuration for ALB
+ingress:
+  enabled: true
+  className: alb
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
+  hosts:
+    - host: ""
+      paths:
+        - path: /
+          pathType: Prefix

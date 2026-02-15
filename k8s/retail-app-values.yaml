@@ -1,0 +1,145 @@
+# Helm Values for Retail Store Sample App
+# This file configures the deployment of the retail store application
+
+# Namespace configuration
+namespace: retail-app
+
+# Image configuration
+image:
+  repository: public.ecr.aws/aws-containers/retail-store-sample
+  pullPolicy: IfNotPresent
+
+# Service configuration for the UI
+ui:
+  service:
+    type: ClusterIP
+    port: 8080
+
+# Catalog service configuration
+catalog:
+  enabled: true
+  replicas: 2
+  service:
+    type: ClusterIP
+    port: 8080
+  # Database configuration (will be overridden if using RDS)
+  database:
+    type: mysql
+    # host: catalog-mysql  # In-cluster MySQL
+    # port: 3306
+    # name: catalog
+    # user: catalog_user
+    # password: default_password
+
+# Orders service configuration
+orders:
+  enabled: true
+  replicas: 2
+  service:
+    type: ClusterIP
+    port: 8080
+  # Database configuration (will be overridden if using RDS)
+  database:
+    type: postgresql
+    # host: orders-postgres  # In-cluster PostgreSQL
+    # port: 5432
+    # name: orders
+    # user: orders_user
+    # password: default_password
+
+# Cart service configuration
+cart:
+  enabled: true
+  replicas: 2
+  service:
+    type: ClusterIP
+    port: 8080
+
+# Checkout service configuration
+checkout:
+  enabled: true
+  replicas: 2
+  service:
+    type: ClusterIP
+    port: 8080
+
+# Assets service configuration
+assets:
+  enabled: true
+  replicas: 1
+  service:
+    type: ClusterIP
+    port: 8080
+
+# In-cluster databases (used when RDS is not enabled)
+mysql:
+  enabled: true
+  auth:
+    rootPassword: rootpass123
+    database: catalog
+    username: catalog_user
+    password: default_password
+  primary:
+    persistence:
+      enabled: true
+      size: 8Gi
+
+postgresql:
+  enabled: true
+  auth:
+    postgresPassword: rootpass123
+    database: orders
+    username: orders_user
+    password: default_password
+  primary:
+    persistence:
+      enabled: true
+      size: 8Gi
+
+# Redis configuration
+redis:
+  enabled: true
+  auth:
+    enabled: false
+  master:
+    persistence:
+      enabled: true
+      size: 2Gi
+
+# RabbitMQ configuration
+rabbitmq:
+  enabled: true
+  auth:
+    username: guest
+    password: guest
+  persistence:
+    enabled: true
+    size: 2Gi
+
+# Resource limits and requests
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 250m
+    memory: 256Mi
+
+# Ingress configuration (for ALB)
+ingress:
+  enabled: true
+  className: alb
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
+    # For HTTPS with ACM certificate:
+    # alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+    # alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:ACCOUNT:certificate/CERT_ID
+    # alb.ingress.kubernetes.io/ssl-redirect: '443'
+  hosts:
+    - host: ""  # Will use ALB DNS name
+      paths:
+        - path: /
+          pathType: Prefix

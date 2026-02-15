@@ -1,0 +1,24 @@
+resources:
+  limits:
+    memory: 512Mi
+  requests:
+    cpu: 200m
+    memory: 256Mi
+
+app:
+  persistence:
+    provider: postgresql
+  messaging:
+    provider: rabbitmq
+
+postgresql:
+  create: true
+  persistentVolume:
+    enabled: true
+    size: 10Gi
+
+rabbitmq:
+  create: true
+  persistentVolume:
+    enabled: true
+    size: 10Gi
