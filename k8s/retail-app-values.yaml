@@ -22,7 +22,7 @@ catalog:
   service:
     type: ClusterIP
     port: 8080
-  # Database configuration (will be overridden if using RDS)
+  # Database configuration
   database:
     type: mysql
     # host: catalog-mysql  # In-cluster MySQL
@@ -38,7 +38,7 @@ orders:
   service:
     type: ClusterIP
     port: 8080
-  # Database configuration (will be overridden if using RDS)
+  # Database configuration
   database:
     type: postgresql
     # host: orders-postgres  # In-cluster PostgreSQL
@@ -71,7 +71,7 @@ assets:
     type: ClusterIP
     port: 8080
 
-# In-cluster databases (used when RDS is not enabled)
+# In-cluster databases
 mysql:
   enabled: true
   auth:
@@ -110,8 +110,8 @@ redis:
 rabbitmq:
   enabled: true
   auth:
-    username: guest
-    password: guest
+    username: REPLACE_WITH_RABBITMQ_USERNAME
+    password: REPLACE_WITH_RABBITMQ_PASSWORD
   persistence:
     enabled: true
     size: 2Gi
@@ -136,8 +136,8 @@ ingress:
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
     # For HTTPS with ACM certificate:
     # alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
-    # alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:ACCOUNT:certificate/CERT_ID
     # alb.ingress.kubernetes.io/ssl-redirect: '443'
+    # alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:816212136006:certificate/REPLACE_WITH_CERT_ID
   hosts:
     - host: ""  # Will use ALB DNS name
       paths:

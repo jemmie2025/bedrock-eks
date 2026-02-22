@@ -1,0 +1,152 @@
+name: Terraform CI/CD
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'terraform/**'
+      - 'k8s/**'
+      - '.github/workflows/terraform.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'terraform/**'
+      - 'k8s/**'
+      - '.github/workflows/terraform.yml'
+  workflow_dispatch:
+
+env:
+  AWS_REGION: us-east-1
+  TERRAFORM_VERSION: '1.5.0'
+
+jobs:
+  terraform-plan:
+    name: Terraform Plan
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Terraform Init
+        working-directory: terraform
+        run: terraform init -backend=true -input=false
+
+      - name: Terraform Validate
+        working-directory: terraform
+        run: terraform validate
+
+      - name: Terraform Plan
+        working-directory: terraform
+        run: terraform plan -no-color -var-file="cicd.tfvars"
+
+  terraform-apply:
+    name: Terraform Apply
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Terraform Init
+        working-directory: terraform
+        run: terraform init -backend=true
+
+      - name: Terraform Plan
+        working-directory: terraform
+        run: terraform plan -no-color -input=false -lock-timeout=5m -var-file="cicd.tfvars" -out=tfplan
+
+      - name: Terraform Apply
+        working-directory: terraform
+        run: terraform apply -auto-approve -input=false -lock-timeout=5m tfplan
+
+      - name: Generate grading JSON
+        working-directory: terraform
+        run: terraform output -json > ../grading.json
+
+      - name: Upload grading JSON artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: grading-json
+          path: grading.json
+
+  deploy-application:
+    name: Deploy Retail App
+    needs: terraform-apply
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: 'v1.28.0'
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: 'v3.13.0'
+
+      - name: Configure kubectl for EKS
+        run: aws eks update-kubeconfig --name project-bedrock-cluster --region ${{ env.AWS_REGION }}
+
+      - name: Deploy retail-store-sample-app
+        run: |
+          helm repo add retail-app https://aws.github.io/retail-store-sample-app
+          helm repo update
+          helm upgrade --install retail retail-app/retail-app \
+            --namespace retail-app \
+            --create-namespace \
+            --values k8s/retail-app-values.yaml \
+            --wait \
+            --timeout 15m
+
+      - name: Capture application URL
+        run: |
+          APP_URL=$(kubectl get ingress -n retail-app -o jsonpath='{.items[0].status.loadBalancer.ingress[0].hostname}')
+          echo "Application URL: http://$APP_URL"
+          echo "APP_URL=http://$APP_URL" >> $GITHUB_ENV
+          echo "## Retail App URL" >> $GITHUB_STEP_SUMMARY
+          echo "http://$APP_URL" >> $GITHUB_STEP_SUMMARY

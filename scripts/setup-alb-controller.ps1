@@ -1,7 +1,7 @@
 #ALBIngressControllerSetupScript
 
 $CLUSTER_NAME="project-bedrock-cluster"
-$AWS_ACCOUNT_ID="197104194412"
+$AWS_ACCOUNT_ID="816212136006"
 $REGION="us-east-1"
 $VPC_ID="vpc-0a8f9d36574fed19d"
 

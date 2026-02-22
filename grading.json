@@ -1,0 +1,107 @@
+{
+  "assets_bucket_name": {
+    "sensitive": false,
+    "type": "string",
+    "value": "bedrock-assets-alt-soe-025-1483"
+  },
+  "cloudwatch_log_groups": {
+    "sensitive": false,
+    "type": [
+      "object",
+      {
+        "cluster_logs": "string",
+        "dataplane_logs": "string",
+        "retail_store_sample_app_logs": "string"
+      }
+    ],
+    "value": {
+      "cluster_logs": "/aws/eks/project-bedrock-cluster/cluster",
+      "dataplane_logs": "/aws/eks/project-bedrock-cluster/dataplane",
+      "retail_store_sample_app_logs": "/aws/eks/project-bedrock-cluster/retail-store-sample-app"
+    }
+  },
+  "cluster_endpoint": {
+    "sensitive": false,
+    "type": "string",
+    "value": "https://8EED69B2DD0F9473225C53B0BBB2AA5B.gr7.us-east-1.eks.amazonaws.com"
+  },
+  "cluster_name": {
+    "sensitive": false,
+    "type": "string",
+    "value": "project-bedrock-cluster"
+  },
+  "configure_kubectl": {
+    "sensitive": false,
+    "type": "string",
+    "value": "aws eks update-kubeconfig --region us-east-1 --name project-bedrock-cluster"
+  },
+  "developer_access_key_id": {
+    "sensitive": true,
+    "type": "string",
+    "value": "REDACTED_FOR_SECURITY"
+  },
+  "developer_secret_access_key": {
+    "sensitive": true,
+    "type": "string",
+    "value": "REDACTED_FOR_SECURITY"
+  },
+  "lambda_function_name": {
+    "sensitive": false,
+    "type": "string",
+    "value": "bedrock-asset-processor"
+  },
+  "private_subnet_ids": {
+    "sensitive": false,
+    "type": [
+      "tuple",
+      [
+        "string",
+        "string"
+      ]
+    ],
+    "value": [
+      "subnet-074144a84b81e3ff4",
+      "subnet-0fabe5e32f5c24d82"
+    ]
+  },
+  "public_subnet_ids": {
+    "sensitive": false,
+    "type": [
+      "tuple",
+      [
+        "string",
+        "string"
+      ]
+    ],
+    "value": [
+      "subnet-0d7c1c43773db52d6",
+      "subnet-007d44bacaaca72cf"
+    ]
+  },
+  "region": {
+    "sensitive": false,
+    "type": "string",
+    "value": "us-east-1"
+  },
+  "view_logs_commands": {
+    "sensitive": false,
+    "type": [
+      "object",
+      {
+        "application_logs": "string",
+        "cluster_logs": "string",
+        "lambda_logs": "string"
+      }
+    ],
+    "value": {
+      "application_logs": "aws logs tail /aws/eks/project-bedrock-cluster/retail-store-sample-app --follow",
+      "cluster_logs": "aws logs tail /aws/eks/project-bedrock-cluster/cluster --follow",
+      "lambda_logs": "aws logs tail /aws/lambda/bedrock-asset-processor --follow"
+    }
+  },
+  "vpc_id": {
+    "sensitive": false,
+    "type": "string",
+    "value": "vpc-095580d6a6c312713"
+  }
+}

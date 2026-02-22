@@ -52,16 +52,6 @@ output "public_subnet_ids" {
   value       = module.vpc.public_subnet_ids
 }
 
-output "rds_mysql_endpoint" {
-  description = "MySQL RDS endpoint"
-  value       = var.enable_rds ? module.rds[0].mysql_endpoint : "Not enabled"
-}
-
-output "rds_postgres_endpoint" {
-  description = "PostgreSQL RDS endpoint"
-  value       = var.enable_rds ? module.rds[0].postgres_endpoint : "Not enabled"
-}
-
 output "configure_kubectl" {
   description = "Command to configure kubectl"
   value       = "aws eks update-kubeconfig --region ${var.aws_region} --name ${module.eks.cluster_name}"

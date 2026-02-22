@@ -12,9 +12,9 @@ echo""
 
 #Configuration
 AWS_REGION="us-east-1"
-BACKEND_BUCKET="bedrock-terraform-state-alt-soe-025-0275"
+BACKEND_BUCKET="bedrock-terraform-state-alt-soe-025-1483"
 DYNAMODB_TABLE="bedrock-terraform-locks"
-STUDENT_ID="ALT-SOE-025-0275"
+STUDENT_ID="ALT/SOE/025/1483"
 
 echo"📦CreatingS3bucketforTerraformstate..."
 if["$AWS_REGION"="us-east-1"];then
@@ -53,7 +53,7 @@ BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublic
 echo"🏷️TaggingS3bucket..."
 awss3apiput-bucket-tagging\
 --bucket$BACKEND_BUCKET\
---tagging"TagSet=[{Key=Project,Value=barakat-2025-capstone},{Key=ManagedBy,Value=Terraform},{Key=StudentID,Value=$STUDENT_ID}]"
+--tagging"TagSet=[{Key=Project,Value=Bedrock},{Key=ManagedBy,Value=Terraform},{Key=StudentID,Value=$STUDENT_ID}]"
 
 echo"🗄️CreatingDynamoDBtableforstatelocking..."
 awsdynamodbcreate-table\
@@ -62,7 +62,7 @@ awsdynamodbcreate-table\
 --key-schemaAttributeName=LockID,KeyType=HASH\
 --provisioned-throughputReadCapacityUnits=5,WriteCapacityUnits=5\
 --region$AWS_REGION\
---tagsKey=Project,Value=barakat-2025-capstoneKey=ManagedBy,Value=TerraformKey=StudentID,Value=$STUDENT_ID\
+--tagsKey=Project,Value=BedrockKey=ManagedBy,Value=TerraformKey=StudentID,Value=$STUDENT_ID\
 2>/dev/null||echo"DynamoDBtablealreadyexists"
 
 echo""

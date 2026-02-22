@@ -15,7 +15,7 @@ variable "environment" {
 variable "student_id" {
   description = "Student ID for unique resource naming"
   type        = string
-  default     = "ALT-SOE-025-0275"
+  default     = "ALT/SOE/025/1483"
 }
 
 variable "cluster_name" {
@@ -93,7 +93,7 @@ variable "developer_username" {
 variable "s3_assets_bucket_suffix" {
   description = "Suffix for S3 assets bucket"
   type        = string
-  default     = "alt-soe-025-0275"
+  default     = "alt-soe-025-1483"
 }
 
 variable "lambda_function_name" {
@@ -106,12 +106,6 @@ variable "app_namespace" {
   description = "Kubernetes namespace for the retail application"
   type        = string
   default     = "retail-app"
-}
-
-variable "enable_rds" {
-  description = "Enable RDS for managed database (bonus feature)"
-  type        = bool
-  default     = true
 }
 
 variable "enable_alb_ingress" {

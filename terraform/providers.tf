@@ -32,7 +32,7 @@ provider "aws" {
 
   default_tags {
     tags = {
-      Project     = "barakat-2025-capstone"
+      Project     = "Bedrock"
       Environment = var.environment
       ManagedBy   = "Terraform"
       StudentID   = var.student_id

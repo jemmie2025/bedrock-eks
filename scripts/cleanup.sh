@@ -27,7 +27,7 @@ echo""
 CLUSTER_NAME="project-bedrock-cluster"
 AWS_REGION="us-east-1"
 NAMESPACE="retail-app"
-BACKEND_BUCKET="bedrock-terraform-state-alt-soe-025-0275"
+BACKEND_BUCKET="bedrock-terraform-state-alt-soe-025-1483"
 DYNAMODB_TABLE="bedrock-terraform-locks"
 
 #DeleteKubernetesresourcesfirst

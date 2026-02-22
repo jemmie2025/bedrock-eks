@@ -8,11 +8,11 @@ metadata:
     alb.ingress.kubernetes.io/target-type: ip
     alb.ingress.kubernetes.io/healthcheck-path: /
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
-    alb.ingress.kubernetes.io/tags: Project=barakat-2025-capstone,Environment=production
+    alb.ingress.kubernetes.io/tags: Project=Bedrock,Environment=production
     # Uncomment for HTTPS with ACM certificate:
-    # alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:ACCOUNT_ID:certificate/CERT_ID
     # alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
     # alb.ingress.kubernetes.io/ssl-redirect: '443'
+    # alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:816212136006:certificate/REPLACE_WITH_CERT_ID
 spec:
   ingressClassName: alb
   rules:

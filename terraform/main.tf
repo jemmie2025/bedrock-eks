@@ -2,7 +2,7 @@
 
 locals {
   common_tags = {
-    Project   = "barakat-2025-capstone"
+    Project   = "Bedrock"
     ManagedBy = "Terraform"
   }
 }
@@ -18,11 +18,25 @@ data "aws_availability_zones" "available" {
 }
 
 ################################################################################
+# IAM Developer User
+################################################################################
+
+module "iam" {
+  source = "../modules/iam"
+
+  developer_username = var.developer_username
+  cluster_name       = var.cluster_name
+  cluster_arn        = module.eks.cluster_arn
+
+  tags = local.common_tags
+}
+
+################################################################################
 # VPC Module
 ################################################################################
 
 module "vpc" {
-  source = "./modules/vpc"
+  source = "../modules/vpc"
 
   vpc_name             = var.vpc_name
   vpc_cidr             = var.vpc_cidr
@@ -41,7 +55,7 @@ module "vpc" {
 ################################################################################
 
 module "eks" {
-  source = "./modules/eks"
+  source = "../modules/eks"
 
   cluster_name              = var.cluster_name
   cluster_version           = var.cluster_version
@@ -56,25 +70,11 @@ module "eks" {
 }
 
 ################################################################################
-# IAM Developer User
-################################################################################
-
-module "iam" {
-  source = "./modules/iam"
-
-  developer_username = var.developer_username
-  cluster_name       = var.cluster_name
-  cluster_arn        = module.eks.cluster_arn
-
-  tags = local.common_tags
-}
-
-################################################################################
 # S3 and Lambda for Event-Driven Processing
 ################################################################################
 
 module "serverless" {
-  source = "./modules/serverless"
+  source = "../modules/serverless"
 
   assets_bucket_name  = "bedrock-assets-${var.s3_assets_bucket_suffix}"
   lambda_function_name = var.lambda_function_name
@@ -88,7 +88,7 @@ module "serverless" {
 ################################################################################
 
 module "observability" {
-  source = "./modules/observability"
+  source = "../modules/observability"
 
   aws_region          = var.aws_region
   cluster_name        = var.cluster_name
@@ -107,7 +107,7 @@ module "observability" {
 ################################################################################
 
 module "k8s_rbac" {
-  source = "./modules/k8s-rbac"
+  source = "../modules/k8s-rbac"
   count  = var.enable_k8s_rbac ? 1 : 0
 
   developer_iam_arn = module.iam.developer_user_arn
@@ -118,26 +118,11 @@ module "k8s_rbac" {
 }
 
 ################################################################################
-# RDS Databases (Bonus)
-################################################################################
-
-module "rds" {
-  source = "./modules/rds"
-  count  = var.enable_rds ? 1 : 0
-
-  vpc_id              = module.vpc.vpc_id
-  private_subnet_ids  = module.vpc.private_subnet_ids
-  eks_security_group_id = module.eks.node_security_group_id
-
-  tags = local.common_tags
-}
-
-################################################################################
 # AWS Load Balancer Controller (Bonus)
 ################################################################################
 
 module "alb_controller" {
-  source = "./modules/alb-controller"
+  source = "../modules/alb-controller"
   count  = var.enable_alb_ingress ? 1 : 0
 
   cluster_name       = var.cluster_name
