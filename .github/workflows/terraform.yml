@@ -1,141 +1,258 @@
-name: Terraform CI/CD
+name: Bedrock Infrastructure CI/CD
 
 on:
   pull_request:
-    branches: [main]
+    branches:
+      - main
     paths:
-      - 'terraform/**'
-      - 'k8s/**'
-      - '.github/workflows/terraform.yml'
+      - "terraform/**"
+      - "modules/**"
+      - "k8s/**"
+      - ".github/workflows/terraform.yml"
+
   push:
-    branches: [main]
+    branches:
+      - main
     paths:
-      - 'terraform/**'
-      - 'k8s/**'
-      - '.github/workflows/terraform.yml'
+      - "terraform/**"
+      - "modules/**"
+      - "k8s/**"
+      - ".github/workflows/terraform.yml"
+
   workflow_dispatch:
+    inputs:
+      deploy:
+        description: "Provision AWS infrastructure and deploy the application to EKS"
+        required: true
+        default: false
+        type: boolean
 
 env:
   AWS_REGION: us-east-1
-  TERRAFORM_VERSION: '1.5.0'
+  TERRAFORM_VERSION: "1.5.0"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bedrock-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  terraform-plan:
-    name: Terraform Plan
-    if: github.event_name == 'pull_request'
+
+  # ============================================================
+  # CONTINUOUS INTEGRATION
+  # Validates Terraform without accessing or modifying AWS.
+  # Runs automatically on pushes and pull requests.
+  # ============================================================
+
+  terraform-validation:
+    name: Terraform Validation
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: write
+
     steps:
-      - name: Checkout code
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Terraform
+      - name: Configure Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ env.TERRAFORM_VERSION }}
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Terraform Init
+      - name: Check Terraform Formatting
         working-directory: terraform
-        run: terraform init -backend=true -input=false
+        run: terraform fmt -check -recursive
 
-      - name: Terraform Validate
+      - name: Initialize Terraform Without Remote Backend
+        working-directory: terraform
+        run: terraform init -backend=false -input=false
+
+      - name: Validate Terraform Configuration
         working-directory: terraform
         run: terraform validate
 
-      - name: Terraform Plan
-        working-directory: terraform
-        run: terraform plan -no-color -var-file="cicd.tfvars"
 
-  terraform-apply:
-    name: Terraform Apply
-    if: github.event_name != 'pull_request'
+  # ============================================================
+  # TERRAFORM PLAN
+  # Runs only when deployment is manually requested.
+  # This prevents normal commits from provisioning AWS resources.
+  # ============================================================
+
+  terraform-plan:
+    name: Terraform Deployment Plan
+    needs: terraform-validation
+
+    if: >
+      github.event_name == 'workflow_dispatch' &&
+      inputs.deploy == true
+
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
+
     steps:
-      - name: Checkout code
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Terraform
+      - name: Configure Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ env.TERRAFORM_VERSION }}
 
-      - name: Configure AWS credentials
+      - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Terraform Init
-        working-directory: terraform
-        run: terraform init -backend=true
+      - name: Verify AWS Authentication
+        run: aws sts get-caller-identity
 
-      - name: Terraform Plan
+      - name: Initialize Terraform
         working-directory: terraform
-        run: terraform plan -no-color -input=false -lock-timeout=5m -var-file="cicd.tfvars" -out=tfplan
+        run: terraform init -input=false
 
-      - name: Terraform Apply
+      - name: Generate Terraform Plan
         working-directory: terraform
-        run: terraform apply -auto-approve -input=false -lock-timeout=5m tfplan
+        run: |
+          terraform plan \
+            -no-color \
+            -input=false \
+            -lock-timeout=5m \
+            -out=tfplan
 
-      - name: Generate grading JSON
-        working-directory: terraform
-        run: terraform output -json > ../grading.json
-
-      - name: Upload grading JSON artifact
+      - name: Upload Terraform Plan
         uses: actions/upload-artifact@v4
         with:
-          name: grading-json
-          path: grading.json
+          name: bedrock-terraform-plan
+          path: terraform/tfplan
+          retention-days: 1
 
-  deploy-application:
-    name: Deploy Retail App
-    needs: terraform-apply
-    if: github.event_name != 'pull_request'
+
+  # ============================================================
+  # TERRAFORM APPLY
+  # Provisions AWS resources only after an intentional
+  # manual deployment request.
+  # ============================================================
+
+  terraform-apply:
+    name: Provision AWS Infrastructure
+    needs: terraform-plan
+
+    if: >
+      github.event_name == 'workflow_dispatch' &&
+      inputs.deploy == true
+
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
+
+    environment:
+      name: production
+
     steps:
-      - name: Checkout code
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Configure AWS credentials
+      - name: Configure Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Setup kubectl
+      - name: Verify AWS Authentication
+        run: aws sts get-caller-identity
+
+      - name: Initialize Terraform
+        working-directory: terraform
+        run: terraform init -input=false
+
+      - name: Generate Deployment Plan
+        working-directory: terraform
+        run: |
+          terraform plan \
+            -no-color \
+            -input=false \
+            -lock-timeout=5m \
+            -out=tfplan
+
+      - name: Apply Terraform Configuration
+        working-directory: terraform
+        run: |
+          terraform apply \
+            -auto-approve \
+            -input=false \
+            tfplan
+
+      - name: Export Terraform Outputs
+        working-directory: terraform
+        run: terraform output -json > ../terraform-outputs.json
+
+      - name: Upload Terraform Outputs
+        uses: actions/upload-artifact@v4
+        with:
+          name: bedrock-terraform-outputs
+          path: terraform-outputs.json
+
+
+  # ============================================================
+  # APPLICATION DEPLOYMENT
+  # Deploys the Retail Store sample application only after
+  # successful AWS infrastructure provisioning.
+  # ============================================================
+
+  deploy-application:
+    name: Deploy Application to Amazon EKS
+    needs: terraform-apply
+
+    if: >
+      github.event_name == 'workflow_dispatch' &&
+      inputs.deploy == true
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Configure kubectl
         uses: azure/setup-kubectl@v4
         with:
-          version: 'v1.28.0'
+          version: "v1.28.0"
 
-      - name: Setup Helm
+      - name: Configure Helm
         uses: azure/setup-helm@v4
         with:
-          version: 'v3.13.0'
+          version: "v3.13.0"
 
-      - name: Configure kubectl for EKS
-        run: aws eks update-kubeconfig --name project-bedrock-cluster --region ${{ env.AWS_REGION }}
-
-      - name: Deploy retail-store-sample-app
+      - name: Configure Amazon EKS Access
         run: |
-          helm repo add retail-app https://aws.github.io/retail-store-sample-app
+          aws eks update-kubeconfig \
+            --name project-bedrock-cluster \
+            --region "${{ env.AWS_REGION }}"
+
+      - name: Verify Kubernetes Connectivity
+        run: kubectl get nodes
+
+      - name: Add Retail Application Helm Repository
+        run: |
+          helm repo add retail-app \
+            https://aws.github.io/retail-store-sample-app
+
           helm repo update
+
+      - name: Deploy Retail Store Application
+        run: |
           helm upgrade --install retail retail-app/retail-app \
             --namespace retail-app \
             --create-namespace \
@@ -143,10 +260,37 @@ jobs:
             --wait \
             --timeout 15m
 
-      - name: Capture application URL
+      - name: Verify Application Deployment
         run: |
-          APP_URL=$(kubectl get ingress -n retail-app -o jsonpath='{.items[0].status.loadBalancer.ingress[0].hostname}')
-          echo "Application URL: http://$APP_URL"
-          echo "APP_URL=http://$APP_URL" >> $GITHUB_ENV
-          echo "## Retail App URL" >> $GITHUB_STEP_SUMMARY
-          echo "http://$APP_URL" >> $GITHUB_STEP_SUMMARY
+          kubectl get pods -n retail-app
+          kubectl get services -n retail-app
+          kubectl get ingress -n retail-app
+
+      - name: Publish Application Endpoint
+        shell: bash
+        run: |
+          APP_URL=$(kubectl get ingress \
+            -n retail-app \
+            -o jsonpath='{.items[0].status.loadBalancer.ingress[0].hostname}')
+
+          if [ -n "$APP_URL" ]; then
+            echo "APP_URL=http://$APP_URL" >> "$GITHUB_ENV"
+
+            {
+              echo "## Bedrock Deployment"
+              echo ""
+              echo "Application successfully deployed to Amazon EKS."
+              echo ""
+              echo "**Application URL:** http://$APP_URL"
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Application deployed, but the external endpoint is not available yet."
+
+            {
+              echo "## Bedrock Deployment"
+              echo ""
+              echo "Application deployment completed."
+              echo ""
+              echo "The external load balancer endpoint is still being provisioned."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
