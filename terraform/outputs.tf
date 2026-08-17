@@ -60,9 +60,9 @@ output "configure_kubectl" {
 output "cloudwatch_log_groups" {
   description = "CloudWatch Log Groups for monitoring"
   value = {
-    cluster_logs                  = module.observability.cloudwatch_log_group_name
-    retail_store_sample_app_logs  = module.observability.application_log_group_name
-    dataplane_logs                = module.observability.dataplane_log_group_name
+    cluster_logs                 = module.observability.cloudwatch_log_group_name
+    retail_store_sample_app_logs = module.observability.application_log_group_name
+    dataplane_logs               = module.observability.dataplane_log_group_name
   }
 }
 

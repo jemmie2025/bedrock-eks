@@ -57,14 +57,14 @@ module "vpc" {
 module "eks" {
   source = "../modules/eks"
 
-  cluster_name              = var.cluster_name
-  cluster_version           = var.cluster_version
-  vpc_id                    = module.vpc.vpc_id
-  private_subnet_ids        = module.vpc.private_subnet_ids
-  node_group_desired_size   = var.node_group_desired_size
-  node_group_min_size       = var.node_group_min_size
-  node_group_max_size       = var.node_group_max_size
-  node_instance_types       = var.node_instance_types
+  cluster_name            = var.cluster_name
+  cluster_version         = var.cluster_version
+  vpc_id                  = module.vpc.vpc_id
+  private_subnet_ids      = module.vpc.private_subnet_ids
+  node_group_desired_size = var.node_group_desired_size
+  node_group_min_size     = var.node_group_min_size
+  node_group_max_size     = var.node_group_max_size
+  node_instance_types     = var.node_instance_types
 
   tags = local.common_tags
 }
@@ -76,7 +76,7 @@ module "eks" {
 module "serverless" {
   source = "../modules/serverless"
 
-  assets_bucket_name  = "bedrock-assets-${var.s3_assets_bucket_suffix}"
+  assets_bucket_name   = "bedrock-assets-${var.s3_assets_bucket_suffix}"
   lambda_function_name = var.lambda_function_name
   lambda_source_dir    = "${path.root}/../lambda"
 
@@ -90,12 +90,12 @@ module "serverless" {
 module "observability" {
   source = "../modules/observability"
 
-  aws_region          = var.aws_region
-  cluster_name        = var.cluster_name
-  cluster_version     = var.cluster_version
-  cluster_endpoint    = module.eks.cluster_endpoint
-  oidc_provider_arn   = module.eks.oidc_provider_arn
-  oidc_provider_url   = module.eks.oidc_provider_url
+  aws_region        = var.aws_region
+  cluster_name      = var.cluster_name
+  cluster_version   = var.cluster_version
+  cluster_endpoint  = module.eks.cluster_endpoint
+  oidc_provider_arn = module.eks.oidc_provider_arn
+  oidc_provider_url = module.eks.oidc_provider_url
 
   tags = local.common_tags
 
@@ -125,11 +125,11 @@ module "alb_controller" {
   source = "../modules/alb-controller"
   count  = var.enable_alb_ingress ? 1 : 0
 
-  cluster_name       = var.cluster_name
-  cluster_endpoint   = module.eks.cluster_endpoint
-  oidc_provider_arn  = module.eks.oidc_provider_arn
-  oidc_provider_url  = module.eks.oidc_provider_url
-  vpc_id             = module.vpc.vpc_id
+  cluster_name      = var.cluster_name
+  cluster_endpoint  = module.eks.cluster_endpoint
+  oidc_provider_arn = module.eks.oidc_provider_arn
+  oidc_provider_url = module.eks.oidc_provider_url
+  vpc_id            = module.vpc.vpc_id
 
   tags = local.common_tags
 
